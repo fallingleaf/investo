@@ -2,8 +2,7 @@ Ark ETF position scanning script
 ==================================
 
 Python script used to crawl all stock positions in ETFs: ARKK, ARKQ, ARKW, ARKF
-and compare the difference in holdings. It will print out which stocks are
-recently bought, sold or closed by ARK.
+and compare the difference in holdings to previous date. It will print out which stocks are recently bought, sold or closed by ARK.
 
 ## How to use it
 

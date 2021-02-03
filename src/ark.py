@@ -65,7 +65,7 @@ def update_stocks(name, url):
             if delta > 0:
                 print("New share purchases: %s\t%s\t%s" % (name, sticker, delta))
             elif delta < 0:
-                print("Share sold: %s\t%s\t%s" % (name, sticker, -delta))
+                print("Position reduced: %s\t%s\t%s" % (name, sticker, -delta))
 
         for (name, sticker, shares) in records:
             print("Sold all shares: %s\t%s\t%s" % (name, sticker, shares))
