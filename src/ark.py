@@ -1,8 +1,12 @@
 import csv
+import heapq
 import os
 import requests
-
 import tabula
+
+from collections import defaultdict
+from operator import itemgetter
+
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 ETF = (
@@ -24,10 +28,10 @@ def parse_pdf(name, url):
     data = data_frames[0]
     for row in data.values:
         arr = row.tolist()
-        name, sticker, shares = str(arr[3]), str(arr[5]), str(arr[9])
+        name, sticker, shares = str(arr[3]), str(arr[5]), str(arr[11])
         if sticker == 'nan':
             continue
-        shares = int(shares.replace(',', ''))
+        shares = float(shares.replace(',', ''))
         yield (name, sticker, shares)
 
 
@@ -45,7 +49,7 @@ def read_csv(filename):
             yield row
 
 
-def update_stocks(name, url):
+def update_stocks(name, url, report):
     filename = os.path.join(BASE_DIR, f'./data/{name}.csv')
     records = {}
     print("Fetching new stock list for ETF: ", name)
@@ -56,23 +60,64 @@ def update_stocks(name, url):
         for row in read_csv(filename):
             (_, sticker, _) = row
             records[sticker] = row
-
+        print("Compare to previous stocks holding...")
         for (name, sticker, shares) in stocks:
-            delta = shares
+            delta = 0
             if sticker in records:
-                delta = shares - int(records[sticker][2])
+                delta = shares - float(records[sticker][2])
                 records.pop(sticker)
+            else:
+                report['new'][sticker] += shares
             if delta > 0:
-                print("New share purchases: %s\t%s\t%s" % (name, sticker, delta))
+                report['increase'][sticker] += delta
             elif delta < 0:
-                print("Position reduced: %s\t%s\t%s" % (name, sticker, -delta))
+                report['reduce'][sticker] -= delta
 
         for (name, sticker, shares) in records:
-            print("Sold all shares: %s\t%s\t%s" % (name, sticker, shares))
-    print("Save new data to file...")
+            report['sold'][sticker] += shares
+    print("Save new data to file...\n")
     write_csv(filename, stocks)
 
 
-if __name__ == '__main__':
+def report(num_stock):
+    report = {
+        'new': defaultdict(float),
+        'increase': defaultdict(float),
+        'reduce': defaultdict(float),
+        'sold': defaultdict(float)
+    }
+
     for name, url in ETF:
-        update_stocks(name, url)
+        update_stocks(name, url, report)
+
+    # Report new share purchases
+    print("New purchases....\n")
+    new_purchases = heapq.nlargest(num_stock, report['new'].items(),
+                                  key=itemgetter(1))
+    for sticker, shares in new_purchases:
+        print("%s:\t%s" % (sticker, shares))
+
+    # Report share sold
+    print("Share sold....\n")
+    sold = heapq.nlargest(num_stock, report['sold'].items(), key=itemgetter(1))
+    for sticker, shares in sold:
+        print("%s:\t%s" % (sticker, shares))
+
+    # Report increased holding
+    print("Increase share holding....\n")
+    increase = heapq.nlargest(num_stock, report['increase'].items(),
+                              key=itemgetter(1))
+    for sticker, shares in increase:
+        print("%s:\t%s" % (sticker, shares))
+
+    # Report reduce holding
+    print("Reduce share holding....\n")
+    reduced_shares = heapq.nlargest(num_stock, report['reduce'].items(),
+                              key=itemgetter(1))
+    for sticker, shares in reduced_shares:
+        print("%s:\t%s" % (sticker, shares))
+
+
+
+if __name__ == '__main__':
+    report(10)
