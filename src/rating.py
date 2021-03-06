@@ -60,6 +60,8 @@ def main():
     with open(file_path, 'r') as fd:
         reader = csv.reader(fd)
         for row in reader:
+            if not row:
+                continue
             quote = row[0]
             quotes.append(quote)
 
