@@ -73,8 +73,8 @@ def update_stocks(name, url, report):
             elif delta < 0:
                 report['reduce'][sticker] -= delta
 
-        for (name, sticker, shares) in records:
-            report['sold'][sticker] += shares
+        for sticker in records:
+            report['sold'][sticker] += float(records[sticker][2])
     print("Save new data to file...\n")
     write_csv(filename, stocks)
 
