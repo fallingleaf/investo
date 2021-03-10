@@ -24,7 +24,7 @@ def parse_pdf(name, url):
         for chunk in r.iter_content(chunk_size=128):
             fd.write(chunk)
 
-    data_frames = tabula.read_pdf(filename, pages="1")
+    data_frames = tabula.read_pdf(filename, guess=False, pages="1")
     data = data_frames[0]
     for row in data.values:
         arr = row.tolist()
