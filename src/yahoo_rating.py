@@ -27,14 +27,21 @@ def fetch_stock_quote(quote):
     current = re.search('"currentPrice":.*?}', html)
     median = re.search('"targetMedianPrice":.*?}', html)
     high = re.search('"targetHighPrice":.*?}', html)
+    # There are multiple points for 52 week ranges, ensure it's expected quote
+    oneyear = re.search('"%s":.*?fiftyTwoWeekRange.*?}' % quote, html)
 
-    if current and median and high:
+    if current and median and high and oneyear:
         current = _translate(current, 'currentPrice')
         median = _translate(median, 'targetMedianPrice')
         high = _translate(high, 'targetHighPrice')
-        avg_return = round((median - current) * 100 / current, 2)
-        high_return = round((high - current) * 100 / current, 2)
-        return (quote, current, median, high, avg_return, high_return)
+
+        oneyear = oneyear.group(0)
+        oneyear = json.loads('{%s}}' % oneyear)
+        oneyear = oneyear.get(quote, {}).get('fiftyTwoWeekRange', {}).get('raw', '')
+        ylow, yhigh = oneyear.split('-')
+        ylow, yhigh = float(ylow), float(yhigh)
+
+        return (quote, current, ylow, yhigh, median, high)
     return None
 
 def main():
