@@ -30,6 +30,22 @@ def fetch_stock_quote(quote):
     # There are multiple points for 52 week ranges, ensure it's expected quote
     oneyear = re.search('"%s":.*?fiftyTwoWeekRange.*?}' % quote, html)
 
+    surprise = 0.0
+    earnings = re.search('"earningsChart":.*?\[.*?\]', html)
+    if earnings:
+        earnings = earnings.group(0)
+        earnings = json.loads('{%s}}' % earnings)
+        quarterly = earnings['earningsChart']['quarterly']
+        if quarterly:
+            last = quarterly[-1]
+            actual, estimate = last.get('actual', {}), last.get('estimate', {})
+            actual, estimate = actual.get('raw', 0), estimate.get('raw', 0)
+            if estimate != 0:
+                if actual < estimate:
+                    surprise = -abs((estimate - actual)/estimate*100)
+                if actual > estimate:
+                    surprise = abs((estimate - actual)/estimate*100)
+
     if current and median and high and oneyear:
         current = _translate(current, 'currentPrice')
         median = _translate(median, 'targetMedianPrice')
@@ -41,7 +57,7 @@ def fetch_stock_quote(quote):
         ylow, yhigh = oneyear.split('-')
         ylow, yhigh = float(ylow), float(yhigh)
 
-        return (quote, current, ylow, yhigh, median, high)
+        return (quote, current, ylow, yhigh, median, high, round(surprise, 2))
     return None
 
 def main():
