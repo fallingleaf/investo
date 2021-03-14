@@ -57,7 +57,7 @@ def fetch_stock_quote(quote):
         ylow, yhigh = oneyear.split('-')
         ylow, yhigh = float(ylow), float(yhigh)
 
-        return (quote, current, ylow, yhigh, median, high, round(surprise, 2))
+        return (quote, current, ylow, yhigh, median, high)
     return None
 
 def main():

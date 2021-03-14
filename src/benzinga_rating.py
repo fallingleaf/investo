@@ -1,17 +1,19 @@
+import arrow
 import csv
+import json
 import os
-import random
+import re
 import requests
-import time
 from bs4 import BeautifulSoup
 
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-BENZINGA_URL = 'https://www.benzinga.com/stock/{}/ratings'
+BENZINGA_URL = 'https://www.benzinga.com/quote/{}'
+DAYS_LIMIT = 180
 
 
 def fetch_stock_quote(quote):
-    url = BENZINGA_URL.format(quote.lower())
+    url = BENZINGA_URL.format(quote)
     resp = requests.get(url)
     print("Get quote: %s\n" % quote)
     if resp.status_code != 200:
@@ -19,38 +21,41 @@ def fetch_stock_quote(quote):
         return None
 
     html = resp.text
-    selector = BeautifulSoup(html, 'html.parser')
+    # Get quote data
+    data = re.search('"richQuoteData":.*?}', html)
+    data = data.group(0)
+    data = json.loads('{%s}' % data)
+    data = data['richQuoteData']
+    price = data['lastTradePrice']
+    ylow = data['fiftyTwoWeekLow']
+    yhigh = data['fiftyTwoWeekHigh']
 
-    # Get current stock price
-    title = selector.find('div', class_='stock-page-title-ticker')
-    price = title.contents[0].string
-    price = float(price.replace(',', ''))
-
-    # Get all ratings
-    ratings = []
-    table = selector.find('table', class_='stock-ratings-calendar')
-    for tr in table.tbody.find_all('tr'):
-        tds = tr.find_all('td')
-        info = tds[4].string
-        if not info:
+    # Get all ratings in recent 6 months
+    ratings = re.search('"ratings":.*?]', html)
+    ratings = ratings.group(0)
+    # print("current rating: \n", ratings)
+    ratings = json.loads('{%s}' % ratings)
+    ratingList = ratings['ratings']
+    now = arrow.now()
+    count = 0
+    avg = 0
+    top = 0
+    total = 0
+    for rating in ratingList:
+        when = arrow.get(rating['date'])
+        delta = now - when
+        if delta.days > DAYS_LIMIT or not rating['pt_current']:
             continue
-        ratings.append(float(info.replace(',', '')))
+        count += 1
+        val = float(rating['pt_current'])
+        if val > top:
+            top = val
+        total += val
 
-    if not ratings:
-        return None
+    if count > 0:
+        avg = round(total/count, 2)
+    return (quote, price, ylow, yhigh, avg, top)
 
-    ratings.sort()
-    highest = ratings[-1]
-    highest_return = (highest - price)*100/price
-    avg = sum(ratings)/len(ratings)
-    avg_return = (avg - price)*100/price
-    return (quote,
-            price,
-            round(avg, 2),
-            highest,
-            round(avg_return, 2),
-            round(highest_return, 2)
-            )
 
 def main():
     file_path = os.path.join(BASE_DIR, './data/stock_list.csv')
@@ -80,3 +85,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    # print(fetch_stock_quote('YALA'))
