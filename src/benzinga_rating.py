@@ -4,6 +4,7 @@ import json
 import os
 import re
 import requests
+import sys
 from bs4 import BeautifulSoup
 
 
@@ -57,8 +58,9 @@ def fetch_stock_quote(quote):
     return (quote, price, ylow, yhigh, avg, top)
 
 
-def main():
-    file_path = os.path.join(BASE_DIR, './data/stock_list.csv')
+def main(filename=None):
+    fn = filename or 'stock_list.csv'
+    file_path = os.path.join(BASE_DIR, f'./data/{fn}')
     quotes = []
     data = []
 
@@ -71,7 +73,11 @@ def main():
             quotes.append(quote)
 
     for quote in quotes:
-        item = fetch_stock_quote(quote)
+        try:
+            item = fetch_stock_quote(quote)
+        except Exception as err:
+            print("Error: ", err)
+            continue
         if not item:
             continue
         data.append(item)
@@ -84,5 +90,8 @@ def main():
             writer.writerow(row)
 
 if __name__ == '__main__':
-    main()
-    # print(fetch_stock_quote('YALA'))
+    fn = None
+    if len(sys.argv) > 1:
+        fn = sys.argv[1]
+    main(fn)
+    # print(fetch_stock_quote('DDAIF'))
