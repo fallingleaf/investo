@@ -37,12 +37,17 @@ def fetch_stock_quote(quote):
     # print("current rating: \n", ratings)
     ratings = json.loads('{%s}' % ratings)
     ratingList = ratings['ratings']
+    analysts = set()
     now = arrow.now()
     count = 0
     avg = 0
     top = 0
     total = 0
     for rating in ratingList:
+        analyst = rating.get('analyst')
+        if analyst in analysts:
+            continue
+        analysts.add(analyst)
         when = arrow.get(rating['date'])
         delta = now - when
         if delta.days > DAYS_LIMIT or not rating['pt_current']:
@@ -94,4 +99,4 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         fn = sys.argv[1]
     main(fn)
-    # print(fetch_stock_quote('DDAIF'))
+    # print(fetch_stock_quote('TPX'))
